@@ -56,23 +56,30 @@ function Get-FilesByExtensionInDirectory {
         [Parameter(Mandatory=$true, Position=0)]
         [string]$FolderPath,
 		
-		[Parameter(Mandatory=$true, Position=1)]
-		[string]$Extension,
+	 [Parameter(Mandatory=$true, Position=1)]
+	[string]$Extension,
 
-	    [Parameter(Position=2)]
+        [Parameter(Position=2)]
         [string]$TxtFilePath
     )
 
     if (Test-Path $FolderPath) {
 
-      $data = Get-ChildItem -Path $FolderPath -Recurse -Filter *.$Extension | Select-Object -ExpandProperty FullName 
+       $files = Get-ChildItem -Path $FolderPath -Recurse -Filter *.$Extension | Select-Object FullName, Length
 
-      if ($TxtFilePath) {
-        $data | Out-File $TxtFilePath
-        Write-Host "Data exported to '$TxtFilePath'"
-      } else {
-        $data | Out-String | Write-Host
-      }
+        $totalCount = $files.Count
+	$totalSizeKB = "{0:N2}" -f (($files | Measure-Object -Property Length -Sum).Sum / 1KB)
+
+        $header = "size: $($totalSizeKB) KB,`r`files: $totalCount`r`n---"
+        
+        if ($TxtFilePath) {
+            $header | Out-File $TxtFilePath
+            $files | ForEach-Object { $_.FullName } | Add-Content -Path $TxtFilePath
+            Write-Host "Data exported to '$TxtFilePath' with header"
+        } else {
+            Write-Host $header
+            $files | ForEach-Object { Write-Host $_.FullName }
+        }
 
     } else {
         Write-Error "The path '$FolderPath' does not exist."
